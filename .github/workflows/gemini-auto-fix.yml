@@ -39,10 +39,10 @@ jobs:
   auto-fix:
     name: Apply Gemini Review Fixes
     runs-on: ubuntu-latest
-    # Only run if comment is from gemini-code-assist on a PR
+    # Only run if comment is from gemini-code-assist[bot] on a PR
     if: |
       github.event.issue.pull_request &&
-      github.event.comment.user.login == 'gemini-code-assist' &&
+      github.event.comment.user.login == 'gemini-code-assist[bot]' &&
       github.event.comment.user.type == 'Bot' &&
       contains(fromJson('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     steps:
@@ -91,7 +91,15 @@ jobs:
             let match;
             const fixes = [];
             let appliedCount = 0;
-            const allowedPathRegex = new RegExp(process.env.ALLOWED_PATH_PATTERN);
+
+            // Validate and compile the allowed path regex
+            let allowedPathRegex;
+            try {
+              allowedPathRegex = new RegExp(process.env.ALLOWED_PATH_PATTERN);
+            } catch (err) {
+              core.setFailed(`Invalid allowed_path_pattern regex: ${err.message}`);
+              return;
+            }
 
             while ((match = codeBlockRegex.exec(comment)) !== null) {
               fixes.push(match[1].trim());

@@ -1,0 +1,67 @@
+name: Request AI Code Reviews
+
+# Reusable workflow: requests Copilot and Gemini code reviews on pull requests.
+# Skip reviews globally with [no-review] in the PR title,
+# or per-reviewer with [no-copilot] / [no-gemini].
+#
+# Usage example (caller workflow):
+#
+#   on:
+#     pull_request:
+#       types: [ready_for_review, synchronize]
+#
+#   jobs:
+#     request-reviews:
+#       uses: JakeDot/jd-ai-review-action/.github/workflows/request-ai-reviews.yml@main
+#       permissions:
+#         pull-requests: write
+
+on:
+  workflow_call:
+
+jobs:
+  request-ai-reviews:
+    name: Request ${{ matrix.reviewer.name }} Code Review
+    runs-on: ubuntu-latest
+    # Trigger on PR ready-for-review and subsequent pushes; skip drafts, fork PRs,
+    # global [no-review] tag, and reviewer-specific skip tags in the PR title.
+    if: |
+      github.event_name == 'pull_request' &&
+      contains(fromJson('["ready_for_review", "synchronize"]'), github.event.action) &&
+      !github.event.pull_request.draft &&
+      !contains(github.event.pull_request.title, '[no-review]') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        reviewer:
+          - name: Gemini
+            reviewer_login: "gemini-code-assist"
+            skip_tag: "[no-gemini]"
+          - name: Copilot
+            reviewer_login: "copilot"
+            skip_tag: "[no-copilot]"
+    steps:
+      - name: Request ${{ matrix.reviewer.name }} review via API
+        if: "!contains(github.event.pull_request.title, matrix.reviewer.skip_tag)"
+        uses: actions/github-script@v7
+        env:
+          REVIEWER_LOGIN: ${{ matrix.reviewer.reviewer_login }}
+          REVIEWER_NAME: ${{ matrix.reviewer.name }}
+        with:
+          script: |
+            const reviewerLogin = process.env.REVIEWER_LOGIN;
+            const reviewerName = process.env.REVIEWER_NAME;
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                reviewers: [reviewerLogin],
+              });
+              core.info(`Requested ${reviewerName} review via API.`);
+            } catch (err) {
+              core.warning(`API review request for ${reviewerName} failed: ${err.message}`);
+            }

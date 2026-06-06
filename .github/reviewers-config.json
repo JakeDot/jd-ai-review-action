@@ -1,0 +1,27 @@
+{
+  "default_reviewers": [
+    {
+      "name": "Gemini Code Assist",
+      "id": "gemini-code-assist",
+      "type": "gemini",
+      "enabled": true,
+      "priority": "primary"
+    },
+    {
+      "name": "GitHub Copilot",
+      "id": "copilot",
+      "type": "copilot",
+      "enabled": true,
+      "priority": "secondary"
+    }
+  ],
+  "audit_reviewers": [
+    {
+      "name": "Gemini Code Assist",
+      "id": "gemini-code-assist",
+      "type": "gemini",
+      "enabled": true
+    }
+  ],
+  "custom_reviewers": []
+}

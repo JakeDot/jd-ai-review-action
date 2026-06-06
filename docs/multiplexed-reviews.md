@@ -2,6 +2,16 @@
 
 Distribute code reviews to multiple, configurable AI reviewers with Gemini Code Assist as the primary reviewer.
 
+## ⚠️ Important: Gemini Code Review Discontinuation
+
+Google's consumer version of Gemini Code Assist is being sunset:
+- **June 18, 2026:** New organization installations will be blocked
+- **July 17, 2026:** All code review activity officially ceases
+
+Plan migration to alternative services. This system supports multiple reviewers — configure Copilot, commercial services, or self-hosted solutions before Gemini becomes unavailable.
+
+See [Alternative Review Services](#alternative-review-services) below for examples.
+
 ## Architecture
 
 The multiplexer system consists of:
@@ -119,6 +129,63 @@ Triggers on any review submission:
 
 3. **Update workflows** if custom logic is needed (e.g., special handling for specific review types)
 
+## Alternative Review Services
+
+As Gemini Code Review is being discontinued, consider these alternatives:
+
+### GitHub Copilot (Built-in)
+Already integrated via GitHub's platform. Secondary reviewer in default config.
+```json
+{
+  "name": "GitHub Copilot",
+  "id": "copilot",
+  "type": "copilot",
+  "enabled": true,
+  "priority": "secondary"
+}
+```
+
+### OpenAI GPT-4 (Custom Integration)
+Create a custom bot that uses OpenAI's API for code review.
+```json
+{
+  "name": "OpenAI Code Reviewer",
+  "id": "openai-reviewer-bot",
+  "type": "openai",
+  "enabled": false,
+  "priority": "secondary"
+}
+```
+
+### Anthropic Claude (via API)
+Build a custom reviewer using Claude API for comprehensive code analysis.
+```json
+{
+  "name": "Claude Code Reviewer",
+  "id": "claude-reviewer-bot",
+  "type": "claude",
+  "enabled": false,
+  "priority": "secondary"
+}
+```
+
+### Deepsource / CodeFactor
+SaaS solutions with GitHub integration for automated code quality checks.
+```json
+{
+  "name": "Deepsource",
+  "id": "deepsource",
+  "type": "deepsource",
+  "enabled": false,
+  "priority": "secondary"
+}
+```
+
+### Self-Hosted Solutions
+- **SonarQube:** Code quality and security scanning
+- **Reviewpad:** AI-powered reviews using configurable models
+- **Custom webhook integrations:** Implement your own review service
+
 ## Extending the System
 
 To add new reviewer types:
@@ -126,5 +193,6 @@ To add new reviewer types:
 1. Add to `.github/reviewers-config.json`
 2. Update workflow matrix logic if needed
 3. Add type-specific handling in request/condense workflows
+4. Ensure the reviewer can be added as a GitHub PR reviewer
 
 The system is designed to be extensible without modifying core logic.

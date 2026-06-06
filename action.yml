@@ -1,9 +1,11 @@
-name: Build Component
+name: JD Build Component
 description: >-
   Set up a language toolchain and run a caller-supplied build (and optional
-  test) command for a single project component. Designed to be consumed via a
-  local path when claude-setup is vendored as a git submodule, e.g.
-  `uses: ./.github/claude-setup`.
+  test) command for a single project component.
+
+branding:
+  icon: package
+  color: blue
 
 inputs:
   language:

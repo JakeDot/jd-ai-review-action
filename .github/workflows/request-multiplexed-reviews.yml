@@ -1,0 +1,114 @@
+name: Request Multiplexed Code Reviews
+
+on:
+  pull_request:
+    types: [ready_for_review, synchronize]
+
+jobs:
+  load-reviewers-config:
+    runs-on: ubuntu-latest
+    outputs:
+      reviewers: ${{ steps.config.outputs.reviewers }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Load reviewers configuration
+        id: config
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const config = JSON.parse(fs.readFileSync('.github/reviewers-config.json', 'utf8'));
+            
+            // Filter enabled reviewers and build matrix
+            const reviewers = config.default_reviewers
+              .filter(r => r.enabled)
+              .map(r => ({
+                name: r.name,
+                id: r.id,
+                type: r.type,
+                priority: r.priority
+              }));
+            
+            core.setOutput('reviewers', JSON.stringify(reviewers));
+            core.info(`Loaded ${reviewers.length} reviewers`);
+
+  request-reviews:
+    needs: load-reviewers-config
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    strategy:
+      matrix:
+        reviewer: ${{ fromJson(needs.load-reviewers-config.outputs.reviewers) }}
+      fail-fast: false
+    steps:
+      - name: Request review from ${{ matrix.reviewer.name }}
+        if: |
+          !github.event.pull_request.draft &&
+          !contains(github.event.pull_request.title, '[no-review]')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reviewer = ${{ toJson(matrix.reviewer) }};
+            const skipTag = `[no-${reviewer.id.split('-')[0]}]`;
+            
+            // Skip if tagged
+            if (context.payload.pull_request.title.includes(skipTag)) {
+              core.info(`Skipping ${reviewer.name} (${skipTag} in title)`);
+              return;
+            }
+            
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                reviewers: [reviewer.id],
+              });
+              
+              const priority = reviewer.priority || 'standard';
+              const badge = priority === 'primary' ? '🔴' : '⚪';
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `${badge} Requested review from **${reviewer.name}** (${reviewer.type})`,
+              });
+              
+              core.info(`Requested ${reviewer.name} review`);
+            } catch (err) {
+              core.warning(`Failed to request ${reviewer.name}: ${err.message}`);
+            }
+
+  auto-merge-on-reviews:
+    needs: load-reviewers-config
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    if: |
+      github.event_name == 'pull_request_review' &&
+      github.event.review.user.login == 'gemini-code-assist'
+    steps:
+      - name: Check if primary reviewer approved
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            
+            if (pr.data.mergeable && pr.data.state === 'open') {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                merge_method: 'squash',
+              });
+              
+              core.info('PR auto-merged after Gemini review');
+            }

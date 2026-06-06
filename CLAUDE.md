@@ -3,9 +3,9 @@
 ## Git
 
 ### Authentication
-Use the GitHub PAT stored in the `origin` remote URL.
-When setting up a new repo, embed it as:
-`https://JakeDot:<PAT>@github.com/JakeDot/<repo>.git`
+Use GitHub's built-in `GITHUB_TOKEN` in Actions or pass PAT via secrets.
+Never embed PAT directly in remote URLs — they're logged and exposed in `.git/config`.
+For local development, use SSH keys or `gh` CLI authentication instead.
 
 ### Co-author trailer
 Every commit must include the following trailer on its own line after a blank

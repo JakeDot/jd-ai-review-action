@@ -1,6 +1,6 @@
 # Codebase Audit
 
-This file triggers a comprehensive review of the entire jd-ai-review-action repository.
+This file triggers a comprehensive review of the entire jd-ai-review-action repository. To trigger a new audit, make any modification to this file (such as updating the timestamp at the bottom) and open a pull request targeting `main` or `master`.
 
 **Repository Overview:**
 - Unified toolkit combining AI-powered code review with multi-language build pipeline

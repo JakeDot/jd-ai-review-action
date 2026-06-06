@@ -31,7 +31,14 @@ Edit `.github/reviewers-config.json` to manage reviewers:
       "priority": "secondary"
     }
   ],
-  "audit_reviewers": [],
+  "audit_reviewers": [
+    {
+      "name": "Gemini Code Assist",
+      "id": "gemini-code-assist",
+      "type": "gemini",
+      "enabled": true
+    }
+  ],
   "custom_reviewers": []
 }
 ```

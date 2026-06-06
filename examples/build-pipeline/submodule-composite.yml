@@ -1,0 +1,66 @@
+# Example: building each component with the composite action, for child
+# projects that vendor claude-setup as a git submodule.
+#
+# Add the submodule once in the child repo, e.g.:
+#   git submodule add https://github.com/JakeDot/claude-setup.git .github/claude-setup
+#
+# Then copy this into the CHILD repository at .github/workflows/build.yml.
+# Because composite actions are referenced by local path, the submodule MUST be
+# checked out (submodules: recursive) before the action can be used.
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api-java
+            language: java
+            version: "21"
+            workdir: services/api
+            cache: maven
+            build: mvn -B -ntp clean package
+            test: mvn -B -ntp test
+            artifacts: services/api/target/*.jar
+          - name: web-node
+            language: node
+            version: "20"
+            workdir: apps/web
+            cache: npm
+            setup: npm ci
+            build: npm run build
+            test: npm test --if-present
+            artifacts: apps/web/dist/**
+          - name: engine-scala
+            language: scala
+            version: "21"
+            workdir: modules/engine
+            cache: sbt
+            build: sbt -batch compile
+            test: sbt -batch test
+            artifacts: modules/engine/target/**/*.jar
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build ${{ matrix.name }}
+        uses: ./.github/claude-setup
+        with:
+          language: ${{ matrix.language }}
+          version: ${{ matrix.version }}
+          workdir: ${{ matrix.workdir }}
+          cache: ${{ matrix.cache }}
+          setup: ${{ matrix.setup }}
+          build: ${{ matrix.build }}
+          test: ${{ matrix.test }}
+          artifacts: ${{ matrix.artifacts }}
+          artifact-name: ${{ matrix.name }}

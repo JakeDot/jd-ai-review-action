@@ -1,0 +1,129 @@
+name: Build Component
+description: >-
+  Set up a language toolchain and run a caller-supplied build (and optional
+  test) command for a single project component. Designed to be consumed via a
+  local path when claude-setup is vendored as a git submodule, e.g.
+  `uses: ./.github/claude-setup`.
+
+inputs:
+  language:
+    description: 'One of: java | scala | kotlin | node | python | go | rust | dotnet | custom'
+    required: true
+  version:
+    description: Toolchain version. Per-language default applies when omitted.
+    required: false
+    default: ''
+  distribution:
+    description: JDK distribution for java/scala/kotlin.
+    required: false
+    default: temurin
+  workdir:
+    description: Directory the build/test commands run in.
+    required: false
+    default: '.'
+  setup:
+    description: Extra shell run after toolchain setup, before the build.
+    required: false
+    default: ''
+  build:
+    description: The compile/build command.
+    required: true
+  test:
+    description: Optional test command, run after a successful build.
+    required: false
+    default: ''
+  cache:
+    description: Built-in toolchain cache key (e.g. maven, gradle, sbt, npm, pip).
+    required: false
+    default: ''
+  artifacts:
+    description: Path/glob of build outputs to upload. No upload when empty.
+    required: false
+    default: ''
+  artifact-name:
+    description: Name for the uploaded artifact.
+    required: false
+    default: build-output
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK
+      if: contains(fromJson('["java","scala","kotlin"]'), inputs.language)
+      uses: actions/setup-java@v4
+      with:
+        distribution: ${{ inputs.distribution }}
+        java-version: ${{ inputs.version || '21' }}
+        cache: ${{ inputs.cache }}
+
+    - name: Set up sbt
+      if: inputs.language == 'scala'
+      uses: sbt/setup-sbt@v1
+
+    - name: Set up Node.js
+      if: inputs.language == 'node'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.version || '20' }}
+        cache: ${{ inputs.cache }}
+        # Locate the lockfile inside workdir so caching works for components in
+        # a subdirectory, not just the repo root.
+        cache-dependency-path: |
+          ${{ inputs.workdir }}/package-lock.json
+          ${{ inputs.workdir }}/yarn.lock
+          ${{ inputs.workdir }}/pnpm-lock.yaml
+
+    - name: Set up Python
+      if: inputs.language == 'python'
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.version || '3.12' }}
+        cache: ${{ inputs.cache }}
+        cache-dependency-path: |
+          ${{ inputs.workdir }}/requirements.txt
+          ${{ inputs.workdir }}/poetry.lock
+          ${{ inputs.workdir }}/Pipfile.lock
+          ${{ inputs.workdir }}/pyproject.toml
+
+    - name: Set up Go
+      if: inputs.language == 'go'
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.version || 'stable' }}
+
+    - name: Set up Rust
+      if: inputs.language == 'rust'
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: ${{ inputs.version || 'stable' }}
+
+    - name: Set up .NET
+      if: inputs.language == 'dotnet'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.version || '8.0.x' }}
+
+    - name: Component setup
+      if: inputs.setup != ''
+      working-directory: ${{ inputs.workdir }}
+      shell: bash
+      run: ${{ inputs.setup }}
+
+    - name: Build
+      working-directory: ${{ inputs.workdir }}
+      shell: bash
+      run: ${{ inputs.build }}
+
+    - name: Test
+      if: inputs.test != ''
+      working-directory: ${{ inputs.workdir }}
+      shell: bash
+      run: ${{ inputs.test }}
+
+    - name: Upload artifacts
+      if: inputs.artifacts != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.artifacts }}
+        if-no-files-found: warn

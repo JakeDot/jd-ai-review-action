@@ -1,0 +1,193 @@
+name: Build Pipeline
+
+# Reusable, multi-language compilation/build pipeline.
+#
+# A calling workflow declares which language components it wants to build and
+# supplies the actual build (and optional test) commands. This workflow takes
+# care of the boilerplate: checkout, toolchain setup for each language, caching,
+# running the caller-supplied commands, uploading artifacts and producing a
+# single aggregate status check.
+#
+# The set of components is passed as a JSON array via the `components` input.
+# Each entry is an object with the following fields:
+#
+#   name          (required) Display name + artifact name. Must be unique.
+#   language      (required) One of: java | scala | kotlin | node | python |
+#                            go | rust | dotnet | custom
+#   version       (optional) Toolchain version (e.g. "21", "20", "3.12").
+#                            Sensible per-language defaults apply when omitted.
+#   distribution  (optional) JDK distribution for java/scala/kotlin
+#                            (default: temurin).
+#   workdir       (optional) Directory the build/test commands run in
+#                            (default: ".").
+#   setup         (optional) Extra shell run after toolchain setup, before the
+#                            build (e.g. install protoc, fetch deps).
+#   build         (required) The compile/build command supplied by the caller.
+#   test          (optional) Test command, run after a successful build.
+#   cache         (optional) Built-in toolchain cache key. For java/scala:
+#                            maven | gradle | sbt. For node: npm | yarn | pnpm.
+#                            For python: pip | pipenv | poetry. For node/python
+#                            the dependency lockfile is auto-located within
+#                            `workdir`, so caching works for components that live
+#                            in a subdirectory (not just the repo root).
+#   artifacts     (optional) Path/glob of build outputs to upload.
+#
+# For the `custom` language no toolchain is installed; the caller's `setup`
+# and `build` commands are expected to provision whatever they need.
+
+on:
+  workflow_call:
+    inputs:
+      components:
+        description: JSON array of build components (see file header for schema).
+        required: true
+        type: string
+      runner:
+        description: Runner label the build jobs execute on.
+        required: false
+        type: string
+        default: ubuntu-latest
+      fail-fast:
+        description: Cancel sibling components when one fails.
+        required: false
+        type: boolean
+        default: false
+      submodules:
+        description: Passed to actions/checkout (false | true | recursive).
+        required: false
+        type: string
+        default: 'false'
+      fetch-depth:
+        description: Passed to actions/checkout. 0 fetches full history.
+        required: false
+        type: number
+        default: 1
+      upload-artifacts:
+        description: Upload component artifacts when an `artifacts` path is set.
+        required: false
+        type: boolean
+        default: true
+      setup-script:
+        description: Global shell run once per component before the toolchain
+          setup (e.g. export shared env, log in to a registry).
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    name: build (${{ matrix.component.name }})
+    runs-on: ${{ inputs.runner }}
+    strategy:
+      fail-fast: ${{ inputs.fail-fast }}
+      matrix:
+        component: ${{ fromJson(inputs.components) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.submodules }}
+          fetch-depth: ${{ inputs.fetch-depth }}
+
+      - name: Global setup
+        if: inputs.setup-script != ''
+        shell: bash
+        run: ${{ inputs.setup-script }}
+
+      - name: Set up JDK
+        if: contains(fromJson('["java","scala","kotlin"]'), matrix.component.language)
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ matrix.component.distribution || 'temurin' }}
+          java-version: ${{ matrix.component.version || '21' }}
+          cache: ${{ matrix.component.cache || '' }}
+
+      - name: Set up sbt
+        if: matrix.component.language == 'scala'
+        uses: sbt/setup-sbt@v1
+
+      - name: Set up Node.js
+        if: matrix.component.language == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.component.version || '20' }}
+          cache: ${{ matrix.component.cache || '' }}
+          # Locate the lockfile inside the component's workdir so caching works
+          # for components that live in a subdirectory, not just the repo root.
+          cache-dependency-path: |
+            ${{ matrix.component.workdir || '.' }}/package-lock.json
+            ${{ matrix.component.workdir || '.' }}/yarn.lock
+            ${{ matrix.component.workdir || '.' }}/pnpm-lock.yaml
+
+      - name: Set up Python
+        if: matrix.component.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.component.version || '3.12' }}
+          cache: ${{ matrix.component.cache || '' }}
+          cache-dependency-path: |
+            ${{ matrix.component.workdir || '.' }}/requirements.txt
+            ${{ matrix.component.workdir || '.' }}/poetry.lock
+            ${{ matrix.component.workdir || '.' }}/Pipfile.lock
+            ${{ matrix.component.workdir || '.' }}/pyproject.toml
+
+      - name: Set up Go
+        if: matrix.component.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.component.version || 'stable' }}
+
+      - name: Set up Rust
+        if: matrix.component.language == 'rust'
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ matrix.component.version || 'stable' }}
+
+      - name: Set up .NET
+        if: matrix.component.language == 'dotnet'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ matrix.component.version || '8.0.x' }}
+
+      - name: Component setup
+        if: matrix.component.setup
+        working-directory: ${{ matrix.component.workdir || '.' }}
+        shell: bash
+        run: ${{ matrix.component.setup }}
+
+      - name: Build
+        working-directory: ${{ matrix.component.workdir || '.' }}
+        shell: bash
+        run: ${{ matrix.component.build }}
+
+      - name: Test
+        if: matrix.component.test
+        working-directory: ${{ matrix.component.workdir || '.' }}
+        shell: bash
+        run: ${{ matrix.component.test }}
+
+      - name: Upload artifacts
+        if: inputs.upload-artifacts && matrix.component.artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.component.name }}
+          path: ${{ matrix.component.artifacts }}
+          if-no-files-found: warn
+
+  # Single aggregate check so callers can require one status regardless of how
+  # many components the matrix expanded to.
+  build-summary:
+    name: build summary
+    if: always()
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report pipeline result
+        shell: bash
+        run: |
+          result='${{ needs.build.result }}'
+          echo "Build pipeline result: $result"
+          if [ "$result" != "success" ]; then
+            echo "::error::One or more build components did not succeed ($result)."
+            exit 1
+          fi

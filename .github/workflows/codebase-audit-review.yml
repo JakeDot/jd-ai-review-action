@@ -1,0 +1,51 @@
+name: Codebase Audit Review
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'CODEBASE_AUDIT.md'
+
+jobs:
+  request-gemini-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Request Gemini codebase audit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Request Gemini review
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                reviewers: ['gemini-code-assist'],
+              });
+            } catch (err) {
+              core.info(`Reviewer request: ${err.message}`);
+            }
+            
+            // Post comprehensive audit request
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `@gemini-code-assist Please perform a comprehensive code review of the entire repository.
+
+**Review focus areas:**
+- Code quality, readability, and maintainability
+- Security vulnerabilities and best practices
+- Performance optimization opportunities
+- Documentation completeness and accuracy
+- Workflow configuration and automation best practices
+- Error handling and edge cases
+- Testing coverage and examples
+- Consistency across codebase
+
+This PR represents the full codebase state for your review.`,
+            });
+            
+            core.info('Gemini codebase audit requested');

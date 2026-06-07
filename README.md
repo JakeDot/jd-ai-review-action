@@ -11,6 +11,21 @@ A unified toolkit combining AI-powered code review automation with shared CI/CD 
 
 ---
 
+## Philosophy: BWXT Graphene Alloy Framework
+
+This toolkit is built on the **BWXT graphene alloy** framework—distinct components bonded into a unified structure that's stronger than the sum of its parts.
+
+**Motto:** *German Bibi Blocksberg; Quantum Tunneling* — practical magic meets quantum reach.
+
+**Three M-Framework:**
+- **Motto** — the guiding principle
+- **Mantra** — the repeated practice (configuration as truth, parallelism as default, composability as law, safety as discipline)
+- **Mechanism** — how disparate workflows bond without coupling
+
+See [`BWXT.md`](BWXT.md) for the full framework and design philosophy.
+
+---
+
 ## AI Code Review Workflows
 
 ### Multiplexed Code Reviews

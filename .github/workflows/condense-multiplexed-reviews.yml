@@ -17,10 +17,12 @@ jobs:
         with:
           script: |
             // Exact reviewer IDs to track (not substring matching)
+            // NOTE: GitHub bot usernames are case-sensitive and exact-match only.
+            // Copilot's official bot name is 'copilot-pull-request-reviewer[bot]'.
+            // 'copilot' is kept for potential future integrations but unlikely to match.
             const trackedReviewers = new Set([
               'gemini-code-assist',
-              'copilot-pull-request-reviewer[bot]',
-              'copilot'
+              'copilot-pull-request-reviewer[bot]'
             ]);
 
             // Get all reviews

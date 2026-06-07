@@ -1,9 +1,9 @@
 name: Create PR if needed
 
+# DEPRECATED: Leftover bootstrap workflow. Use GitHub UI to create PRs.
+# Kept for reference but schedule removed (was running every 5 minutes = spam)
 on:
-  schedule:
-    - cron: '*/5 * * * *'  # Every 5 minutes
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   create-or-update-pr:

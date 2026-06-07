@@ -22,7 +22,8 @@
       "type": "claude",
       "enabled": true,
       "priority": "secondary",
-      "description": "Secondary reviewer, Claude-based code analysis"
+      "model": "claude-haiku-4-5",
+      "description": "Secondary reviewer, Claude Haiku for fast code analysis"
     },
     {
       "name": "OpenAI API Reviewer (Example)",

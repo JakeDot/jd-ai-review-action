@@ -5,7 +5,7 @@
 BWXT is a **graphene alloy**—distinct carbon atoms bonded in a crystalline lattice that creates strength through unified structure. As a philosophical framework for jd-ai-review-action, BWXT represents how disparate tools and workflows combine into a cohesive system.
 
 Just as graphene bonds individual atoms into something stronger than the sum of parts, this toolkit bonds:
-- **Multiple AI reviewers** (Gemini, Copilot, Claude, custom) into a unified review system
+- **Multiple AI reviewers** (Gemini, Copilot, Claude Haiku, custom) into a unified review system
 - **Build automation** with **code review** into integrated CI/CD
 - **Configuration-driven architecture** with **workflow orchestration** into flexible, extensible infrastructure
 

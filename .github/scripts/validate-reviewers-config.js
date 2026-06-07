@@ -76,7 +76,7 @@ try {
     process.exit(1);
   }
 
-  process.exit(warnings.length > 0 ? 0 : 1);
+  process.exit(0);
 } catch (err) {
   console.error(`❌ Failed to validate config: ${err.message}`);
   process.exit(1);

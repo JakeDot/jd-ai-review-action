@@ -100,6 +100,14 @@ Triggers on any review submission:
 
 ## Adding Custom Reviewers
 
+### Option 1: Use the helper script (recommended)
+
+```bash
+node .github/scripts/add-reviewer.js "Custom Bot" custom-bot custom --priority secondary
+```
+
+### Option 2: Manual edit
+
 1. **Update config:**
    ```json
    "custom_reviewers": [
@@ -113,11 +121,16 @@ Triggers on any review submission:
    ]
    ```
 
-2. **Ensure the reviewer is available on GitHub**
+2. **Validate:**
+   ```bash
+   node .github/scripts/validate-reviewers-config.js
+   ```
+
+3. **Ensure the reviewer is available on GitHub**
    - Must be able to be added as a PR reviewer
    - Must be able to submit reviews
 
-3. **Update workflows** if custom logic is needed (e.g., special handling for specific review types)
+4. **Update workflows** if custom logic is needed (e.g., special handling for specific review types)
 
 ## Extending the System
 

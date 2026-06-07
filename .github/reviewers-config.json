@@ -9,7 +9,7 @@
     },
     {
       "name": "GitHub Copilot",
-      "id": "copilot",
+      "id": "copilot-pull-request-reviewer[bot]",
       "type": "copilot",
       "enabled": true,
       "priority": "secondary"

@@ -17,6 +17,14 @@
       "description": "Secondary reviewer, optional feedback"
     },
     {
+      "name": "Claude AI",
+      "id": "claude-ai-review[bot]",
+      "type": "claude",
+      "enabled": true,
+      "priority": "secondary",
+      "description": "Secondary reviewer, Claude-based code analysis"
+    },
+    {
       "name": "OpenAI API Reviewer (Example)",
       "id": "openai-code-reviewer",
       "type": "openai",

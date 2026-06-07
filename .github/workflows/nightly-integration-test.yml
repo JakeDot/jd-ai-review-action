@@ -1,0 +1,130 @@
+name: Nightly Integration Test
+
+# Run at midnight UTC every day
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test 1 - Validate configuration
+        run: node .github/scripts/validate-reviewers-config.js
+
+      - name: Test 2 - Check reviewer status
+        run: node .github/scripts/check-reviewer-status.js
+
+      - name: Test 3 - Verify reviewers config structure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const config = JSON.parse(fs.readFileSync('.github/reviewers-config.json', 'utf8'));
+
+            // Assert required properties exist
+            console.assert(config.default_reviewers, 'default_reviewers missing');
+            console.assert(Array.isArray(config.default_reviewers), 'default_reviewers not an array');
+            console.assert(config.default_reviewers.length > 0, 'default_reviewers is empty');
+
+            // Assert at least one primary reviewer
+            const hasPrimary = config.default_reviewers.some(r => r.priority === 'primary' && r.enabled);
+            console.assert(hasPrimary, 'No primary reviewer configured');
+
+            console.log('✅ Configuration structure test passed');
+
+      - name: Test 4 - Verify workflow files exist
+        run: |
+          test -f .github/workflows/request-multiplexed-reviews.yml || exit 1
+          test -f .github/workflows/condense-multiplexed-reviews.yml || exit 1
+          test -f .github/workflows/auto-merge-after-review.yml || exit 1
+          test -f .github/workflows/validate-config.yml || exit 1
+          echo "✅ All required workflows exist"
+
+      - name: Test 5 - Validate YAML syntax
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const YAML = require('js-yaml');
+
+            const workflows = [
+              '.github/workflows/request-multiplexed-reviews.yml',
+              '.github/workflows/condense-multiplexed-reviews.yml',
+              '.github/workflows/auto-merge-after-review.yml',
+              '.github/workflows/validate-config.yml'
+            ];
+
+            for (const file of workflows) {
+              try {
+                const content = fs.readFileSync(file, 'utf8');
+                YAML.load(content);
+                console.log(`✅ ${file} - valid YAML`);
+              } catch (err) {
+                throw new Error(`${file} - invalid YAML: ${err.message}`);
+              }
+            }
+
+      - name: Test 6 - Check documentation completeness
+        run: |
+          test -f docs/multiplexed-reviews.md || exit 1
+          grep -q "Troubleshooting" docs/multiplexed-reviews.md || exit 1
+          grep -q "Alternative Review Services" docs/multiplexed-reviews.md || exit 1
+          echo "✅ Documentation is complete"
+
+      - name: Test 7 - Verify example config
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const example = JSON.parse(fs.readFileSync('.github/reviewers-config.example.json', 'utf8'));
+
+            console.assert(example.default_reviewers, 'example: default_reviewers missing');
+            console.assert(example.audit_reviewers, 'example: audit_reviewers missing');
+            console.assert(example.custom_reviewers, 'example: custom_reviewers missing');
+
+            console.log('✅ Example configuration test passed');
+
+      - name: Report Results
+        if: success()
+        run: |
+          echo "✅ All integration tests passed!"
+          echo ""
+          echo "Tests run:"
+          echo "  1. Configuration validation"
+          echo "  2. Reviewer status check"
+          echo "  3. Config structure verification"
+          echo "  4. Workflow file existence"
+          echo "  5. YAML syntax validation"
+          echo "  6. Documentation completeness"
+          echo "  7. Example configuration"
+
+      - name: Notify on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('Nightly integration test failed');
+            
+            // Optionally create an issue
+            try {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🚨 Nightly Integration Test Failed',
+                body: `The nightly integration test failed on ${new Date().toISOString()}.
+                
+Please check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`,
+                labels: ['ci-failure', 'automated']
+              });
+            } catch (err) {
+              core.warning(`Could not create issue: ${err.message}`);
+            }

@@ -23,6 +23,8 @@ try {
 
   // Validate each reviewer in default_reviewers
   if (hasDefaultReviewers) {
+    const validTypes = ['gemini', 'copilot', 'custom', 'openai', 'claude', 'coderabbit'];
+
     config.default_reviewers.forEach((reviewer, index) => {
       const prefix = `default_reviewers[${index}]`;
 
@@ -31,6 +33,11 @@ try {
       if (!reviewer.type) errors.push(`${prefix}: missing "type"`);
       if (typeof reviewer.enabled !== 'boolean') {
         errors.push(`${prefix}: "enabled" must be boolean`);
+      }
+
+      // Check type is valid
+      if (reviewer.type && !validTypes.includes(reviewer.type)) {
+        warnings.push(`${prefix}: unknown reviewer type "${reviewer.type}" (known types: ${validTypes.join(', ')})`);
       }
 
       // Check priority if present

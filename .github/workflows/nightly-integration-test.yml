@@ -77,6 +77,12 @@ jobs:
 
             console.log('✅ Example configuration test passed');
 
+      - name: Test 8 - Verify script files are executable
+        run: |
+          test -x .github/scripts/validate-reviewers-config.js && echo "✅ validate-reviewers-config.js is executable"
+          test -x .github/scripts/check-reviewer-status.js && echo "✅ check-reviewer-status.js is executable"
+          test -x .github/scripts/add-reviewer.js && echo "✅ add-reviewer.js is executable"
+
       - name: Report Results
         if: success()
         run: |
@@ -90,6 +96,7 @@ jobs:
           echo "  5. YAML syntax validation"
           echo "  6. Documentation completeness"
           echo "  7. Example configuration"
+          echo "  8. Script files executable"
 
       - name: Notify on Failure
         if: failure()

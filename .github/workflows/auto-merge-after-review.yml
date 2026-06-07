@@ -9,6 +9,7 @@ jobs:
   auto-merge-on-approval:
     # Only merge if Gemini approves (state: APPROVED)
     if: |
+      github.event_name == 'pull_request_review' &&
       github.event.review.user.login == 'gemini-code-assist' &&
       github.event.review.state == 'APPROVED'
     runs-on: ubuntu-latest

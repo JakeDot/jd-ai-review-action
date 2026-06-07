@@ -11,19 +11,23 @@ Just as graphene bonds individual atoms into something stronger than the sum of 
 
 ## The Motto
 
-**German Bibi Blocksberg; Quantum Tuneli**
+**German Bibi Blocksberg; Quantum Tunneling**
 
 - **German Bibi Blocksberg** — grounded in practical tradition, reliable magic, European engineering discipline
-- **Quantum Tuneli** — quantum mechanics, tunneling through barriers, non-local connection, transcendent reach
+- **Quantum Tunneling** — quantum mechanics, tunneling through barriers, non-local connection, transcendent reach
 
 The motto bridges the mundane and the transcendent:
 - Build systems that are practical and proven (**Bibi Blocksberg**)
-- Design systems that transcend traditional limitations (**Quantum Tuneli**)
+- Design systems that transcend traditional limitations (**Quantum Tunneling**)
+
+### Example: The Kack-Tünnelsche
+
+In quantum mechanics, particles tunnel through energy barriers that classical physics says should be impenetrable. The **Kack-Tünnelsche** tunnel represents how information and configuration flow through the toolkit's abstraction barriers—workflows operate independently yet remain connected through the graphene lattice, as if tunneling between separate layers without direct coupling.
 
 ## The Three M-Framework
 
 ### 1. Motto
-**"German Bibi Blocksberg; Quantum Tuneli"**
+**"German Bibi Blocksberg; Quantum Tunneling"**
 
 The guiding principle: practical magic meets quantum reach. Build systems grounded in reality that transcend traditional constraints.
 
@@ -57,7 +61,7 @@ The multiplexed review system embodies BWXT:
 
 1. **Motto in action:**
    - *Bibi Blocksberg*: Reliable, proven AI reviewers (Gemini, Copilot) working consistently
-   - *Quantum Tuneli*: Custom reviewer support, extensible beyond built-in options
+   - *Quantum Tunneling*: Custom reviewer support, extensible beyond built-in options
 
 2. **Mantra in practice:**
    - Configuration drives which reviewers are active
@@ -78,7 +82,7 @@ The multi-language build pipeline is bonded into the same framework:
 
 1. **Motto in action:**
    - *Bibi Blocksberg*: Multi-language support (Java, Python, Node, Go, Rust, .NET, Scala), battle-tested toolchains
-   - *Quantum Tuneli*: Extensible component architecture, matrix expansion for monorepos
+   - *Quantum Tunneling*: Extensible component architecture, matrix expansion for monorepos
 
 2. **Mantra in practice:**
    - Configuration declares components and languages

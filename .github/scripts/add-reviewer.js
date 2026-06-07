@@ -10,7 +10,26 @@ const path = require('path');
 
 const args = process.argv.slice(2);
 
-if (args.length < 3) {
+// Robust argument parsing: separate positional args from flags
+let name, id, type;
+let isAudit = false;
+let priority;
+let hasPriority = false;
+
+const positionals = [];
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--audit') {
+    isAudit = true;
+  } else if (args[i] === '--priority') {
+    hasPriority = true;
+    priority = args[i + 1];
+    i++;
+  } else {
+    positionals.push(args[i]);
+  }
+}
+
+if (positionals.length < 3) {
   console.error('Usage: node add-reviewer.js <name> <id> <type> [--priority primary|secondary] [--audit]');
   console.error('\nExample:');
   console.error('  node add-reviewer.js "Claude AI" claude-ai claude');
@@ -19,15 +38,28 @@ if (args.length < 3) {
   process.exit(1);
 }
 
-const [name, id, type] = args;
-const isAudit = args.includes('--audit');
-const priorityIdx = args.indexOf('--priority');
-const priority = priorityIdx >= 0 ? args[priorityIdx + 1] : undefined;
+[name, id, type] = positionals;
 
 const configPath = path.join(__dirname, '../reviewers-config.json');
 
 try {
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+  // Input validation
+  if (!name.trim() || !id.trim() || !type.trim()) {
+    throw new Error('Name, ID, and Type cannot be empty or whitespace-only');
+  }
+
+  // Check for duplicates across all reviewer lists
+  const exists = [
+    ...(config.default_reviewers || []),
+    ...(config.audit_reviewers || []),
+    ...(config.custom_reviewers || [])
+  ].some(r => r.id === id);
+
+  if (exists) {
+    throw new Error(`Reviewer with ID "${id}" already exists in the configuration`);
+  }
 
   const newReviewer = {
     name,
@@ -36,22 +68,31 @@ try {
     enabled: true
   };
 
-  if (priority) {
+  // Validate priority if provided
+  if (hasPriority) {
     if (!['primary', 'secondary'].includes(priority)) {
       throw new Error(`Invalid priority "${priority}" (must be primary or secondary)`);
     }
     newReviewer.priority = priority;
   }
 
+  // Route to appropriate list
   if (isAudit) {
     if (!config.audit_reviewers) config.audit_reviewers = [];
     config.audit_reviewers.push(newReviewer);
     console.log(`✅ Added to audit_reviewers: ${name} (${id})`);
+  } else if (type === 'custom') {
+    if (!config.custom_reviewers) config.custom_reviewers = [];
+    config.custom_reviewers.push(newReviewer);
+    console.log(`✅ Added to custom_reviewers: ${name} (${id})`);
+    if (hasPriority) {
+      console.log(`   Priority: ${priority}`);
+    }
   } else {
     if (!config.default_reviewers) config.default_reviewers = [];
     config.default_reviewers.push(newReviewer);
     console.log(`✅ Added to default_reviewers: ${name} (${id})`);
-    if (priority) {
+    if (hasPriority) {
       console.log(`   Priority: ${priority}`);
     }
   }

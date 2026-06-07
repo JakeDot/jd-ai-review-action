@@ -1,0 +1,21 @@
+name: Validate Reviewers Config
+
+on:
+  pull_request:
+    paths:
+      - '.github/reviewers-config.json'
+  push:
+    paths:
+      - '.github/reviewers-config.json'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate reviewers configuration
+        run: node .github/scripts/validate-reviewers-config.js
+      
+      - name: Show reviewer status
+        run: node .github/scripts/check-reviewer-status.js

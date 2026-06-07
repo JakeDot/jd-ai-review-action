@@ -1,0 +1,24 @@
+{
+  "aliases": [
+    {
+      "canonical": "CLAUDE.md",
+      "aliases": ["DEVELOPER.md", "CONTRIBUTING.md"],
+      "description": "Developer and contributor guidelines"
+    },
+    {
+      "canonical": ".github/reviewers-config.json",
+      "aliases": [".github/reviewer-config.json", "reviewers.json"],
+      "description": "Reviewer configuration - single source of truth"
+    },
+    {
+      "canonical": "BWXT.md",
+      "aliases": ["PHILOSOPHY.md", "FRAMEWORK.md"],
+      "description": "Project philosophy and design framework"
+    }
+  ],
+  "deduplication": {
+    "enabled": true,
+    "scan_paths": [".github/", "docs/", "."],
+    "ignore_patterns": [".git/", "node_modules/", ".DS_Store", "*.swp"]
+  }
+}

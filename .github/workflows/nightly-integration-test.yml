@@ -50,28 +50,12 @@ jobs:
           echo "✅ All required workflows exist"
 
       - name: Test 5 - Validate YAML syntax
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const YAML = require('js-yaml');
-
-            const workflows = [
-              '.github/workflows/request-multiplexed-reviews.yml',
-              '.github/workflows/condense-multiplexed-reviews.yml',
-              '.github/workflows/auto-merge-after-review.yml',
-              '.github/workflows/validate-config.yml'
-            ];
-
-            for (const file of workflows) {
-              try {
-                const content = fs.readFileSync(file, 'utf8');
-                YAML.load(content);
-                console.log(`✅ ${file} - valid YAML`);
-              } catch (err) {
-                throw new Error(`${file} - invalid YAML: ${err.message}`);
-              }
-            }
+        run: |
+          npm install -g yaml-cli
+          yaml-cli .github/workflows/request-multiplexed-reviews.yml > /dev/null && echo "✅ request-multiplexed-reviews.yml - valid YAML"
+          yaml-cli .github/workflows/condense-multiplexed-reviews.yml > /dev/null && echo "✅ condense-multiplexed-reviews.yml - valid YAML"
+          yaml-cli .github/workflows/auto-merge-after-review.yml > /dev/null && echo "✅ auto-merge-after-review.yml - valid YAML"
+          yaml-cli .github/workflows/validate-config.yml > /dev/null && echo "✅ validate-config.yml - valid YAML"
 
       - name: Test 6 - Check documentation completeness
         run: |

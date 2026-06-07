@@ -128,3 +128,57 @@ To add new reviewer types:
 3. Add type-specific handling in request/condense workflows
 
 The system is designed to be extensible without modifying core logic.
+
+## Troubleshooting
+
+### No reviews requested
+
+**Symptom:** PR created but no reviewers added  
+**Cause:** Workflow not triggered or permission issues  
+**Fix:**
+- Check PR is not a draft
+- Check PR title doesn't contain `[no-review]`
+- Verify `request-multiplexed-reviews.yml` is in `.github/workflows/`
+- Check GitHub Actions are enabled in repo settings
+
+### Reviews requested but auto-merge not triggering
+
+**Symptom:** Reviewer approved but PR not merging  
+**Cause:** Review state is not "APPROVED" or PR has merge conflicts  
+**Fix:**
+- Check reviewer submitted "APPROVED" review (not "COMMENTED")
+- Verify PR has no merge conflicts
+- Check auto-merge-after-review.yml conditions
+- Ensure `contents: write` permission is available
+
+### Duplicate review requests
+
+**Symptom:** Same reviewer requested multiple times  
+**Cause:** Workflow triggered multiple times on same PR  
+**Fix:**
+- GitHub deduplicates reviewer requests automatically
+- If comments spam, check workflow trigger conditions
+- Review workflow is stateless — multiple triggers are normal
+
+### Reviewer not recognized
+
+**Symptom:** Reviewer ID in config doesn't match GitHub user  
+**Cause:** Typo in reviewer ID or wrong bot name  
+**Fix:**
+- Run validator: `node .github/scripts/validate-reviewers-config.js`
+- Verify exact bot/user name (case-sensitive)
+- Use exact match, not substring (e.g., `copilot-pull-request-reviewer[bot]`)
+
+### Validate your config
+
+Always validate configuration before pushing:
+
+```bash
+node .github/scripts/validate-reviewers-config.js
+```
+
+This catches errors early:
+- Missing required fields
+- Duplicate IDs
+- Invalid priorities
+- Disabled primary reviewers

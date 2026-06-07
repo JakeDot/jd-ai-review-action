@@ -12,56 +12,52 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - name: Minimize outdated reviews from all reviewers
+      - name: Condense outdated reviews from tracked reviewers
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const reviewerIds = ['gemini-code-assist', 'copilot-pull-request-reviewer'];
-            
+            // Exact reviewer IDs to track (not substring matching)
+            // NOTE: GitHub bot usernames are case-sensitive and exact-match only.
+            // Copilot's official bot name is 'copilot-pull-request-reviewer[bot]'.
+            // 'copilot' is kept for potential future integrations but unlikely to match.
+            const trackedReviewers = new Set([
+              'gemini-code-assist',
+              'copilot-pull-request-reviewer[bot]'
+            ]);
+
             // Get all reviews
             const reviews = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number,
             });
-            
-            // Group by reviewer and minimize old ones
+
+            // Group reviews by exact reviewer match
             const reviewsByUser = {};
             reviews.data.forEach(review => {
               const login = review.user.login;
-              if (reviewerIds.some(id => login.includes(id))) {
+              // Only track exact matches
+              if (trackedReviewers.has(login)) {
                 if (!reviewsByUser[login]) reviewsByUser[login] = [];
                 reviewsByUser[login].push(review);
               }
             });
-            
-            // Minimize all but the latest review from each user
+
+            // Log but don't dismiss - just inform about duplicates
+            let condensed = 0;
             for (const [user, userReviews] of Object.entries(reviewsByUser)) {
               if (userReviews.length > 1) {
-                const sorted = userReviews.sort((a, b) => 
+                const sorted = userReviews.sort((a, b) =>
                   new Date(b.submitted_at) - new Date(a.submitted_at)
                 );
-                
-                for (let i = 1; i < sorted.length; i++) {
-                  const review = sorted[i];
-                  if (review.state !== 'DISMISSED') {
-                    try {
-                      await github.rest.pulls.dismissReview({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        pull_number: context.issue.number,
-                        review_id: review.id,
-                        message: `Outdated review from ${user}. Latest review: #${sorted[0].id}`,
-                      });
-                      
-                      core.info(`Minimized outdated review ${review.id} from ${user}`);
-                    } catch (err) {
-                      core.warning(`Failed to minimize review: ${err.message}`);
-                    }
-                  }
-                }
+
+                // Report outdated reviews (all except the latest)
+                const latestId = sorted[0].id;
+                sorted.slice(1).forEach(review => {
+                  core.info(`Found outdated review #${review.id} from ${user} (latest: #${latestId})`);
+                  condensed++;
+                });
               }
             }
-            
-            core.info('Review condensing complete');
+
+            core.info(`Review scan complete: found ${condensed} outdated reviews`);

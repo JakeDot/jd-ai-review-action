@@ -1,71 +1,25 @@
-name: Auto-merge after Gemini review
+name: Auto-merge after Gemini approval
 
-# Trigger when Gemini posts a review
+# Trigger only when Gemini submits an approval review
 on:
   pull_request_review:
     types: [submitted]
-  issue_comment:
-    types: [created, edited]
 
 jobs:
-  invite-gemini:
-    # If no review yet, post a comment inviting Gemini
-    if: |
-      github.event_name == 'pull_request' &&
-      !contains(github.event.pull_request.title, '[no-review]')
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Check for existing Gemini review
-        uses: actions/github-script@v7
-        id: check_review
-        with:
-          script: |
-            const reviews = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-            });
-            
-            const geminiReview = reviews.data.find(r => 
-              r.user.login === 'gemini-code-assist'
-            );
-            
-            core.setOutput('has_gemini_review', !!geminiReview);
-
-      - name: Request Gemini review
-        if: steps.check_review.outputs.has_gemini_review == 'false'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.pulls.requestReviewers({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-              reviewers: ['gemini-code-assist'],
-            });
-            
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: '@gemini-code-assist please review this PR and provide feedback. Once your review is complete, this PR will be automatically merged.',
-            });
-
-  auto-merge-after-review:
-    # Merge after Gemini submits a review (or any review event)
+  auto-merge-on-approval:
+    # Only merge if Gemini approves (state: APPROVED)
     if: |
       github.event_name == 'pull_request_review' &&
-      github.event.review.user.login == 'gemini-code-assist'
+      github.event.review.user.login == 'gemini-code-assist' &&
+      github.event.review.state == 'APPROVED'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       contents: write
     steps:
-      - name: Check PR status
+      - name: Check PR mergeability
         uses: actions/github-script@v7
-        id: pr_status
+        id: pr_check
         with:
           script: |
             const pr = await github.rest.pulls.get({
@@ -73,12 +27,12 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number,
             });
-            
-            core.setOutput('mergeable', pr.data.mergeable);
-            core.setOutput('state', pr.data.state);
 
-      - name: Merge PR
-        if: steps.pr_status.outputs.mergeable == 'true'
+            core.setOutput('mergeable', pr.data.mergeable);
+            core.info(`PR mergeable: ${pr.data.mergeable}`);
+
+      - name: Auto-merge PR
+        if: steps.pr_check.outputs.mergeable == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -89,12 +43,12 @@ jobs:
                 pull_number: context.issue.number,
                 merge_method: 'squash',
               });
-              
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: '✅ Gemini review complete! PR automatically merged.',
+                body: '✅ Gemini approved! PR automatically merged.',
               });
             } catch (err) {
               core.warning(`Merge failed: ${err.message}`);
@@ -102,6 +56,6 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: `⚠️ Could not auto-merge: ${err.message}. Manual review needed.`,
+                body: `⚠️ Could not auto-merge: ${err.message}. Manual merge needed.`,
               });
             }

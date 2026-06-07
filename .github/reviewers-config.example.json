@@ -1,0 +1,38 @@
+{
+  "default_reviewers": [
+    {
+      "name": "Gemini Code Assist",
+      "id": "gemini-code-assist",
+      "type": "gemini",
+      "enabled": true,
+      "priority": "primary",
+      "description": "Primary reviewer, triggers auto-merge on approval"
+    },
+    {
+      "name": "GitHub Copilot",
+      "id": "copilot-pull-request-reviewer[bot]",
+      "type": "copilot",
+      "enabled": true,
+      "priority": "secondary",
+      "description": "Secondary reviewer, optional feedback"
+    },
+    {
+      "name": "OpenAI API Reviewer (Example)",
+      "id": "openai-code-reviewer",
+      "type": "openai",
+      "enabled": false,
+      "priority": "secondary",
+      "description": "Not yet implemented - for future integration"
+    }
+  ],
+  "audit_reviewers": [
+    {
+      "name": "Gemini Code Assist",
+      "id": "gemini-code-assist",
+      "type": "gemini",
+      "enabled": true,
+      "description": "Reviews entire codebase on demand via CODEBASE_AUDIT.md"
+    }
+  ],
+  "custom_reviewers": []
+}

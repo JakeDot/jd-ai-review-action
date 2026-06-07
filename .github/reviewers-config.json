@@ -11,7 +11,7 @@
       "name": "GitHub Copilot",
       "id": "copilot-pull-request-reviewer[bot]",
       "type": "copilot",
-      "enabled": true,
+      "enabled": false,
       "priority": "secondary"
     },
     {

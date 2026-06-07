@@ -23,11 +23,19 @@ try {
     config.aliases.forEach((alias, index) => {
       const prefix = `aliases[${index}]`;
 
+      // Defensive check: ensure alias is a valid object
+      if (!alias || typeof alias !== 'object') {
+        errors.push(`${prefix}: must be an object`);
+        return;
+      }
+
       if (!alias.canonical) {
         errors.push(`${prefix}: missing "canonical" file`);
       } else {
-        const canonicalPath = path.join(repoRoot, alias.canonical);
-        if (!fs.existsSync(canonicalPath)) {
+        const canonicalPath = path.resolve(repoRoot, alias.canonical);
+        if (path.relative(repoRoot, canonicalPath).startsWith('..')) {
+          errors.push(`${prefix}: canonical file path is outside repository root: ${alias.canonical}`);
+        } else if (!fs.existsSync(canonicalPath)) {
           errors.push(`${prefix}: canonical file not found: ${alias.canonical}`);
         }
       }
@@ -38,8 +46,10 @@ try {
         warnings.push(`${prefix}: no aliases defined for ${alias.canonical}`);
       } else {
         alias.aliases.forEach((aliasName, aliasIdx) => {
-          const aliasPath = path.join(repoRoot, aliasName);
-          if (fs.existsSync(aliasPath)) {
+          const aliasPath = path.resolve(repoRoot, aliasName);
+          if (path.relative(repoRoot, aliasPath).startsWith('..')) {
+            warnings.push(`${prefix}.aliases[${aliasIdx}]: alias file path is outside repository root: ${aliasName}`);
+          } else if (fs.existsSync(aliasPath)) {
             warnings.push(`${prefix}.aliases[${aliasIdx}]: alias file exists (should not exist): ${aliasName}`);
           }
         });
@@ -52,12 +62,16 @@ try {
   }
 
   // Validate deduplication config
-  if (config.deduplication) {
-    if (!config.deduplication.scan_paths) {
-      warnings.push('deduplication: missing scan_paths');
-    }
-    if (!Array.isArray(config.deduplication.ignore_patterns)) {
-      warnings.push('deduplication: ignore_patterns should be an array');
+  if (config.deduplication !== undefined) {
+    if (typeof config.deduplication !== 'object' || config.deduplication === null) {
+      warnings.push('deduplication: must be an object');
+    } else {
+      if (!Array.isArray(config.deduplication.scan_paths)) {
+        warnings.push('deduplication: scan_paths must be an array');
+      }
+      if (config.deduplication.ignore_patterns && !Array.isArray(config.deduplication.ignore_patterns)) {
+        warnings.push('deduplication: ignore_patterns should be an array');
+      }
     }
   }
 

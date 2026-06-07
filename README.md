@@ -168,6 +168,7 @@ See [`CLAUDE.md`](CLAUDE.md) for contributor guidelines on:
   scripts/
     validate-reviewers-config.js          # Config validator
     check-reviewer-status.js              # Display reviewer status
+    add-reviewer.js                       # Add new reviewers to config
   
   reviewers-config.json                   # Reviewer configuration
   reviewers-config.example.json           # Annotated example

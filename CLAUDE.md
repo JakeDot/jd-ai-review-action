@@ -1,5 +1,19 @@
 # Claude user preferences
 
+## Agent Grounding Instructions
+
+These instructions ground Claude as an agent working on this project:
+
+### Active Development Context
+- **Always switch to the currently active dev branch** — check git status and switch to the current working branch rather than staying on whatever was last checked out
+- **Review memory-view** — consult any available session context, previous notes, or project memory to understand ongoing work and decisions
+- **Respect branch continuity** — when resuming work, resume on the active development branch, not main or stale branches
+
+### Decision Making
+- **Ask before destructive changes** — large refactors, architecture changes, or modifications to core systems should be confirmed with the user first
+- **Iterate on feedback** — accept and implement review feedback from AI reviewers (Gemini, Claude, Copilot); ask the user only on ambiguous or architecturally significant comments
+- **Small focused commits** — each commit should be a logically complete change; avoid bundling unrelated fixes
+
 ## Git
 
 ### Authentication

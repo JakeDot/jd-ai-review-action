@@ -13,105 +13,73 @@ A unified toolkit combining AI-powered code review automation with shared CI/CD 
 
 ## AI Code Review Workflows
 
-### `request-ai-reviews.yml`
+### Multiplexed Code Reviews
 
-Requests reviews from Copilot and Gemini Code Assist on pull request events.  
-Skip tags supported in PR titles: `[no-review]`, `[no-copilot]`, `[no-gemini]`.
+Configure and manage multiple, parallel AI reviewers with a single JSON configuration file.  
+Supports Gemini Code Assist, GitHub Copilot, and custom reviewers.
 
-**Usage example:**
+**Key features:**
+- Configuration-driven reviewer management (`.github/reviewers-config.json`)
+- Parallel review requests with priority badges (🔴 primary, ⚪ secondary)
+- Auto-merge triggered by primary reviewer approval
+- Smart review condensing to minimize comment spam
+- Skip tags for granular control: `[no-review]`, `[no-gemini]`, `[no-copilot]`, `[no-{type}]`
 
-```yaml
-# .github/workflows/request-ai-reviews.yml  (in your repo)
-name: Request AI Code Reviews
+For complete documentation, configuration reference, and troubleshooting, see  
+[`docs/multiplexed-reviews.md`](docs/multiplexed-reviews.md).
 
-on:
-  pull_request:
-    types: [ready_for_review, synchronize]
+**Setup:**
 
-jobs:
-  request-reviews:
-    uses: JakeDot/jd-ai-review-action/.github/workflows/request-ai-reviews.yml@main
-    permissions:
-      pull-requests: write
-```
+1. Copy `.github/reviewers-config.json` from this repo and customize:
+   ```bash
+   curl -o .github/reviewers-config.json \
+     https://raw.githubusercontent.com/JakeDot/jd-ai-review-action/main/.github/reviewers-config.json
+   ```
 
-With a prior build job:
+2. Copy the workflows:
+   ```bash
+   # Request multiplexed reviews
+   curl -o .github/workflows/request-multiplexed-reviews.yml \
+     https://raw.githubusercontent.com/JakeDot/jd-ai-review-action/main/.github/workflows/request-multiplexed-reviews.yml
+   
+   # Condense outdated reviews
+   curl -o .github/workflows/condense-multiplexed-reviews.yml \
+     https://raw.githubusercontent.com/JakeDot/jd-ai-review-action/main/.github/workflows/condense-multiplexed-reviews.yml
+   
+   # Auto-merge on primary approval
+   curl -o .github/workflows/auto-merge-after-review.yml \
+     https://raw.githubusercontent.com/JakeDot/jd-ai-review-action/main/.github/workflows/auto-merge-after-review.yml
+   
+   # (Optional) Validate config on changes
+   curl -o .github/workflows/validate-config.yml \
+     https://raw.githubusercontent.com/JakeDot/jd-ai-review-action/main/.github/workflows/validate-config.yml
+   ```
 
-```yaml
-jobs:
-  build:
-    # ... your build steps
-
-  request-reviews:
-    needs: build
-    uses: JakeDot/jd-ai-review-action/.github/workflows/request-ai-reviews.yml@main
-    permissions:
-      pull-requests: write
-```
-
----
-
-### `condense-reviews.yml`
-
-Minimizes outdated review comments from `copilot-pull-request-reviewer[bot]` and  
-`gemini-code-assist[bot]` whenever either bot posts a new review.
-
-**Usage example:**
-
-```yaml
-# .github/workflows/condense-reviews.yml  (in your repo)
-name: Condense AI Code Reviews
-
-on:
-  pull_request_review:
-    types: [submitted]
-  issue_comment:
-    types: [created]
-
-jobs:
-  condense:
-    uses: JakeDot/jd-ai-review-action/.github/workflows/condense-reviews.yml@main
-    permissions:
-      pull-requests: write
-      issues: write
-```
-
----
-
-### `gemini-auto-fix.yml`
-
-Applies actionable `diff` blocks from Gemini review comments, commits them, and  
-replies with a confirmation comment.
+3. Enable GitHub Actions in your repository settings.
 
 **Usage example:**
 
 ```yaml
-# .github/workflows/gemini-auto-fix.yml  (in your repo)
-name: Gemini Auto-Fix
-
-on:
-  issue_comment:
-    types: [created, edited]
-
-jobs:
-  auto-fix:
-    uses: JakeDot/jd-ai-review-action/.github/workflows/gemini-auto-fix.yml@main
-    permissions:
-      contents: write
-      pull-requests: write
-    with:
-      # Restrict auto-patching to safe file paths in your repo.
-      # Paths starting with .github/ and paths containing .. are always blocked.
-      allowed_path_pattern: '^[A-Za-z0-9._/-]+$'
+# .github/reviewers-config.json
+{
+  "default_reviewers": [
+    {
+      "name": "Gemini Code Assist",
+      "id": "gemini-code-assist",
+      "type": "gemini",
+      "enabled": true,
+      "priority": "primary"
+    },
+    {
+      "name": "GitHub Copilot",
+      "id": "copilot-pull-request-reviewer[bot]",
+      "type": "copilot",
+      "enabled": true,
+      "priority": "secondary"
+    }
+  ]
+}
 ```
-
-#### `allowed_path_pattern` examples
-
-| Repo type | Pattern |
-| --- | --- |
-| Browser extension (jdVidCat) | `'^(manifest\.json\|background\.js\|content\.js\|popup\.js\|popup\.html\|icons\/[A-Za-z0-9._-]+)$'` |
-| Node.js project | `'^(src\/[A-Za-z0-9._/-]+\|package\.json\|tsconfig\.json)$'` |
-| Allow all non-.github files | `'^[A-Za-z0-9._/-]+$'` (default) |
 
 ---
 
@@ -190,24 +158,35 @@ See [`CLAUDE.md`](CLAUDE.md) for contributor guidelines on:
 ```
 .github/
   workflows/
-    request-ai-reviews.yml      # Request AI reviews on PRs
-    condense-reviews.yml        # Minimize outdated review comments
-    gemini-auto-fix.yml         # Auto-apply Gemini diff suggestions
-    build-pipeline.yml          # Multi-language build orchestrator
-    request-reviewers.yml       # Legacy (for submodule-based setups)
+    request-multiplexed-reviews.yml       # Request reviews from configured reviewers
+    condense-multiplexed-reviews.yml      # Minimize outdated review comments
+    auto-merge-after-review.yml           # Auto-merge on primary approval
+    validate-config.yml                   # Validate reviewer config on changes
+    nightly-integration-test.yml          # Daily health checks
+    build-pipeline.yml                    # Multi-language build orchestrator
   
-action.yml                      # Composite action for language setup
+  scripts/
+    validate-reviewers-config.js          # Config validator
+    check-reviewer-status.js              # Display reviewer status
+  
+  reviewers-config.json                   # Reviewer configuration
+  reviewers-config.example.json           # Annotated example
+  action.yml                              # Composite action for language setup
+
 docs/
-  build-pipeline.md             # Complete build pipeline reference
+  multiplexed-reviews.md                  # Multiplexed reviews reference
+  build-pipeline.md                       # Build pipeline reference
+
 examples/
   build-pipeline/
-    reusable-workflow.yml       # Copy-paste example using workflow_call
-    submodule-composite.yml     # Copy-paste example using composite action
-commands/
-  rem.md                        # Claude Code slash commands (setup-related)
+    reusable-workflow.yml                 # Workflow_call example
+    submodule-composite.yml               # Composite action example
 
-CLAUDE.md                       # Contributor guidelines
-README.md                       # This file
+commands/
+  rem.md                                  # Claude Code slash commands
+
+CLAUDE.md                                 # Contributor guidelines
+README.md                                 # This file
 LICENSE
 ```
 
@@ -215,25 +194,14 @@ LICENSE
 
 ## Quick start
 
-### Use AI review workflows
+### Set up multiplexed AI reviews
 
-Add to your repo's `.github/workflows/`:
+1. Copy the config and workflows (see "AI Code Review Workflows" section above)
+2. Customize `.github/reviewers-config.json` with your reviewers
+3. Run the validator: `node .github/scripts/validate-reviewers-config.js`
+4. Commit and push—reviews will automatically trigger on new PRs
 
-```bash
-# Request reviews
-curl -o .github/workflows/request-ai-reviews.yml \
-  https://raw.githubusercontent.com/JakeDot/jd-ai-review-action/main/.github/workflows/request-ai-reviews.yml
-
-# Condense outdated comments
-curl -o .github/workflows/condense-reviews.yml \
-  https://raw.githubusercontent.com/JakeDot/jd-ai-review-action/main/.github/workflows/condense-reviews.yml
-
-# (Optional) Auto-apply Gemini fixes
-curl -o .github/workflows/gemini-auto-fix.yml \
-  https://raw.githubusercontent.com/JakeDot/jd-ai-review-action/main/.github/workflows/gemini-auto-fix.yml
-```
-
-Then trigger them from your own workflows (see examples above).
+See [`docs/multiplexed-reviews.md`](docs/multiplexed-reviews.md) for detailed setup and configuration.
 
 ### Use the build pipeline
 
@@ -243,19 +211,17 @@ Copy an example from [`examples/build-pipeline/`](examples/build-pipeline) and a
 
 ## Integration
 
-Both feature sets work independently or together. Common patterns:
+AI reviews and the build pipeline work independently or together:
 
-- **Review-then-build**: Run `request-ai-reviews` after a build succeeds
-- **Build-then-review**: Let reviews trigger conditional builds
-- **Monorepo**: Use `build-pipeline` for components, AI reviews on the aggregate PR
+- **Review-first**: Request multiplexed reviews on every PR, auto-merge when primary approves
+- **Build-then-review**: Run builds first, request reviews after success
+- **Monorepo**: Use `build-pipeline` for components, multiplexed reviews for the aggregate PR
+- **Custom workflows**: Both systems trigger cleanly without cascading side effects
 
 ---
 
-## Support
+## Maintenance
 
-See the original repos for standalone documentation:
-
-- **AI reviews**: [`github.com/JakeDot/jd-ai-review-action`](https://github.com/JakeDot/jd-ai-review-action)
-- **Build pipeline**: [`github.com/JakeDot/claude-setup`](https://github.com/JakeDot/claude-setup)
-
-Both are maintained as a unified toolkit here.
+- **Config validation**: Runs automatically on any `reviewers-config.json` changes
+- **Nightly tests**: Daily integration tests verify workflows and documentation
+- **Contributor guide**: See [`CLAUDE.md`](CLAUDE.md) for git and commit conventions

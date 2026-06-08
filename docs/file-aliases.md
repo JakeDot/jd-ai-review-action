@@ -73,7 +73,7 @@ Example: Link to `CLAUDE.md`, not `DEVELOPER.md`
 To find all places where aliases are mentioned:
 
 ```bash
-grep -r "DEVELOPER.md\|CONTRIBUTING.md" --include="*.md" --include="*.yml" --include="*.json"
+grep -rE "DEVELOPER.md|CONTRIBUTING.md" --include="*.md" --include="*.yml" --include="*.json"
 ```
 
 This helps identify where documentation needs to be updated to use the canonical name.
